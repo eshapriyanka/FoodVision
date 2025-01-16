@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Menu Board</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+    body {
+        font-family: sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Center content horizontally */
+        background-color: #f0f0f0;
+        min-height: 100vh; 
+        background: linear-gradient(120deg, #FFDEE9, #B5FFFC);
+
+    }
+
+    h1 {
+        margin: 20px 0; /* Add spacing above and below */
+        text-align: center; /* Center the heading */
+    }
+
+    .container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        
+    }
+
+    #cardsContainer {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* Two cards per row */
+        gap: 30px; /* Space between cards */
+        justify-content: center; /* Center the grid content */
+        align-items: center;
+        max-width: 800px; /* Set maximum width for the grid */
+        margin: 20px auto; /* Center the grid container */
+    }
+
+    .card {
+        width: 300px; 
+        height: 250px;
+        background-color: #e2d3f6; 
+        border: 1px solid #ddd;
+        border-radius: 8px; 
+        display: flex; 
+        justify-content: center;
+        align-items: center; 
+        text-align: center; 
+        font-size: 22px;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+
+    .card h3 {
+        margin-top: 0;
+    }
+
+    .card:hover {
+         transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .overlayContent {
+        background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        
+    }
+
+    .closeBtn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #f00;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        padding: 5px;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    .item-list {
+        list-style: none;
+        padding: 0;
+        text-align: left;
+        margin: 20px 0;
+    }
+
+    .item-list li {
+        margin: 10px 0;
+        font-size: 16px;
+    }
+    select {
+            margin-left: 10px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+    .submitBtn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 20px;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+
+    .submitBtn:hover {
+        background-color: #218838;
+    }
+
+    #backButtonContainer {
+    margin-top: 30px; /* Add spacing above the button */
+    text-align: center; /* Center the button horizontally */
+    }
+
+    .back-btn {
+    position: fixed;
+    bottom: 20px; /* Distance from the bottom of the viewport */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%);
+    background-color: #3C6255;
+    color: white;
+    padding: 12px 20px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 5px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.back-btn:hover {
+    background-color: #87DFD6;
+}
+
+</style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Feedback</h1>
+        <div id="cardsContainer"></div>
+    </div>
+
+    <div id="overlay" class="overlay">
+        <div class="overlayContent">
+            <button class="closeBtn" onclick="closeOverlay()">X</button>
+            <h2><span id="categoryTitle"></span></h2>
+            <ul id="itemRatings" class="item-list"></ul>
+            <button class="submitBtn" onclick="submitRatings()">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+              apiKey: "AIzaSyDRphDHbeiKomj1Iev6MbrlL4LOj2qg8_s",
+              authDomain: "foodvision-9284a.firebaseapp.com",
+              databaseURL: "https://foodvision-9284a-default-rtdb.firebaseio.com",
+              projectId: "foodvision-9284a",
+              storageBucket: "foodvision-9284a.firebasestorage.app",
+              messagingSenderId: "49341465857",
+              appId: "1:49341465857:web:076a5d14625b6a3a3c8700",
+              measurementId: "G-88B6W2388L",
+
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function loadCategories() {
+            const cardsContainer = document.getElementById("cardsContainer");
+            const menuRef = database.ref("menuItems");
+
+            menuRef.once("value", (snapshot) => {
+                const categories = snapshot.val();
+                if (categories) {
+                    for (const category in categories) {
+                        const card = document.createElement("div");
+                        card.className = "card";
+                        card.textContent = category;
+                        card.onclick = () => showCategoryRatings(category);
+                        cardsContainer.appendChild(card);
+                    }
+                } else {
+                    cardsContainer.innerHTML = "<p>No categories found.</p>";
+                }
+            });
+        }
+
+        function showCategoryRatings(category) {
+            const overlay = document.getElementById("overlay");
+            const categoryTitle = document.getElementById("categoryTitle");
+            const itemRatings = document.getElementById("itemRatings");
+
+            categoryTitle.textContent = category;
+            itemRatings.innerHTML = "Loading items...";
+
+            const categoryRef = database.ref(`menuItems/${category}`);
+
+
+            categoryRef.once("value", (snapshot) => {
+                const items = snapshot.val();
+                itemRatings.innerHTML = "";
+
+                if (items) {
+                    for (const itemId in items) {
+                        const item = items[itemId];
+                        const listItem = document.createElement("li");
+                        listItem.textContent = `${item.name}:`;
+
+
+                        const select = document.createElement("select");
+                        for (let i = 1; i <= 5; i++) {
+                            const option = document.createElement("option");
+                            option.value = i;
+                            option.textContent = i;
+                            select.appendChild(option);
+                        }
+                        listItem.appendChild(select);
+                        itemRatings.appendChild(listItem);
+                    }
+                } else {
+                    itemRatings.textContent = "No items available for this category.";
+                }
+            }).catch((error) => {
+                console.error("Error fetching data:", error);
+                itemRatings.textContent = "Error loading items. Please try again later.";
+            });
+
+            overlay.style.display = "flex";
+        }
+
+        function closeOverlay() {
+            document.getElementById("overlay").style.display = "none";
+        }
+
+        function submitRatings() {
+            const category = document.getElementById("categoryTitle").textContent;
+            const itemRatings = document.getElementById("itemRatings").children;
+
+            const ratingsData = {};
+            for (let i = 0; i < itemRatings.length; i++) {
+                const listItem = itemRatings[i];
+                const itemName = listItem.textContent.split(":")[0].trim();
+                const rating = listItem.querySelector("select").value;
+
+                ratingsData[itemName] = parseInt(rating); // Store the item name and rating
+            }
+
+            const ratingsRef = database.ref(`ratings/${category}`);
+            ratingsRef
+                .push(ratingsData)
+                .then(() => {
+                    alert("Ratings submitted successfully!");
+                    closeOverlay();
+                })
+                .catch((error) => {
+                    console.error("Error saving ratings:", error);
+                    alert("Failed to submit ratings. Please try again.");
+                });
+        }
+
+
+        window.onload = loadCategories;
+    </script>
+    <div id="backButtonContainer">
+        <a href="home.html" class="back-btn">Back to Home</a>
+    </div>
+
+</body>
+</html>
